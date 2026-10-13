@@ -11,6 +11,10 @@ import { ZhipuProvider } from './zhipu.js';
 import { SailProvider } from './sail.js';
 import { AclideProvider } from './aclide.js';
 import { SpekaProvider } from './speka.js';
+import { TyphoonProvider } from './typhoon.js';
+import { PlugskyProvider } from './plugsky.js';
+import { InferbaseProvider } from './inferbase.js';
+import { SimpleLLMProvider } from './simplellm.js';
 import { LlmtrProvider } from './llmtr.js';
 import { GizmoProvider } from './gizmo.js';
 import { BlockRunProvider } from './blockrun.js';
@@ -21,6 +25,7 @@ import { Router9Provider } from './router9.js';
 import { SeptorProvider } from './septor.js';
 import { ClodProvider } from './clod.js';
 import { SpeechifyProvider } from './speechify.js';
+import { FreeAiProvider } from './freeai.js';
 import { BlazeProvider } from './blaze.js';
 import { LucidityProvider } from './lucidity.js';
 import { AirforceProvider } from './airforce.js';
@@ -62,6 +67,10 @@ register(new OpenAICompatProvider({
 register(new SailProvider());
 register(new AclideProvider());
 register(new SpekaProvider());
+register(new TyphoonProvider());
+register(new PlugskyProvider());
+register(new InferbaseProvider());
+register(new SimpleLLMProvider());
 register(new LlmtrProvider());
 register(new GizmoProvider());
 register(new BlockRunProvider());
@@ -78,6 +87,7 @@ register(new Router9Provider());
 register(new SeptorProvider());
 register(new ClodProvider());
 register(new SpeechifyProvider());
+register(new FreeAiProvider());
 register(new BlazeProvider());
 // Five more OpenAI-compatible gateways. Each pins the response model to the
 // requested route (502 on substitution); rows stay in the hosted catalog.
@@ -165,6 +175,17 @@ register(new OpenAICompatProvider({
   extraHeaders: {
     'HTTP-Referer': 'http://localhost:3001',
     'X-Title': 'FreeLLMAPI',
+  },
+  // #1403: OpenRouter reports the key's real credit balance and hard limit on
+  // its key-info endpoint (outside /api/v1). limit/remaining are USD amounts
+  // when set; null means the key is on the free tier with no credit cap, so
+  // the probe records whatever pair the endpoint actually fills.
+  quotaProbe: {
+    url: 'https://openrouter.ai/api/v1/key',
+    metric: 'credits',
+    limitFields: ['limit'],
+    remainingFields: ['limit_remaining'],
+    notes: 'openrouter key-info: USD credit (limit/limit_remaining)',
   },
 }));
 
@@ -345,6 +366,18 @@ register(new OpenAICompatProvider({
   platform: 'siliconflow',
   name: 'SiliconFlow',
   baseUrl: 'https://api.siliconflow.com/v1',
+  // #1403: SiliconFlow reports the account's credit balance on
+  // GET /v1/user/info (data.balance = gift credit, data.totalBalance = gift +
+  // charge; values arrive as numeric strings in CNY). There is no limit field,
+  // so the probe records remaining only — a real number beats parseBudget's 0
+  // for this pool.
+  quotaProbe: {
+    url: 'https://api.siliconflow.com/v1/user/info',
+    metric: 'credits',
+    limitFields: [],
+    remainingFields: ['totalBalance', 'balance'],
+    notes: 'siliconflow user-info: CNY credit balance (totalBalance)',
+  },
 }));
 
 // Routeway — OpenAI-compatible aggregator (api.routeway.ai/v1). Free models
